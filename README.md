@@ -15,6 +15,11 @@ Inspired by
    * http://planetfoo.org/blog/archive/2012/01/24/a-better-nsupdate/
    * http://planetfoo.org/files/dnsupdate.py
 
-= Licence =
+
+If you see error messages like "TypeError: unsupported operand type(s) for &: 'str' and 'long'" you may need to update your version of dnspython. Debian users may also track http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=593939.
+
+
+Licence
+=======
 Released under the MIT license
 http://opensource.org/licenses/MIT
