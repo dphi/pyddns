@@ -1,0 +1,6 @@
+# Example:
+[test.dyn.example.org]
+password=secure_password
+dns-server=ns.example.org
+nsupdate-key=ASdasdafsadsrAcdsdfeaA==
+origin=example.org
