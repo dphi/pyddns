@@ -1,14 +1,5 @@
-#!/usr/bin/env python2.7
 # Matt's DNS management tool
 # Manage DNS using DDNS features
-#
-# Usage: dnstool -s server -k key add foo.example.com 300 a 1.2.3.4
-# -h HELP!
-# -s the server
-# -k the key
-# the action (add, delete, replace) and record specific parameters
-
-import argparse 
 import textwrap
 import re
 import dns.query
@@ -19,38 +10,6 @@ import dns.resolver
 from dns.exception import DNSException, SyntaxError
 
 Verbose = False
-#
-# Let's use argparser!
-def getArgs():
-    # Setup a argument parser to collect the values we need
-    Args = argparse.ArgumentParser(usage='%(prog)s [-h] {-s} {-k} {-o} [-x] {add|delete|update} {Name} {TTL} [IN] {Type} {Target}', description='Add, Delete, Replace DNS records using DDNS.')
-
-    # -s - The Server
-    Args.add_argument('-s', dest='Server', required=True, 
-                      help='DNS server to update (Required)')
-
-    # -k - The Key
-    Args.add_argument('-k', dest='Key', required=True, 
-                      help='TSIG key. The TSIG key file should be in DNS KEY record format. (Required)')
- 
-    # -o - The Origin
-    Args.add_argument('-o', dest='Origin', required=False,
-                      help='Specify the origin. Optional, if not provided origin will be determined')
-
-    # -x - Add Reverse?
-    Args.add_argument('-x', dest='doPTR', action='store_true', 
-                      help='Also modify the PTR for a given A or AAAA record. Forward and reverse zones must be on the same server.')
-
-    # -v - Add Reverse?
-    Args.add_argument('-v', dest='Verbose', action='store_true',
-                      help='Print the rcode returned with for each update')
-
-    # myInput is a list of additional values required. Actual data varies based on action
-    Args.add_argument('myInput', action='store', nargs='+', metavar='add|delete|update', 
-                       help='{hostname} {TTL} [IN] {Type} {Target}.')
-
-    myArgs = Args.parse_args()
-    return myArgs
 
 #
 # Is a valid TTL?
@@ -164,15 +123,11 @@ def verifymyInput(myInput):
         isValidName(myInput[7])
     return action, ttl, type
 
-def getKey(FileName):
-    f = open(FileName)
-    key = f.readline()
-    f.close()
-    k = {key.rsplit(' ')[0]:key.rsplit(' ')[6]}
+def getKey(KeyString):
     try:
-        KeyRing = dns.tsigkeyring.from_text(k)
+        KeyRing = dns.tsigkeyring.from_text(KeyString)
     except:
-        print k, 'is not a valid key. The file should be in DNS KEY record format. See dnssec-keygen(8)'
+        print KeyString, 'is not a valid key. The file should be in DNS KEY record format. See dnssec-keygen(8)'
         exit()
     return KeyRing
 
@@ -256,13 +211,3 @@ def doUpdate(Server, KeyFile, Origin, doPTR, myInput):
             exit()
         if Verbose == True:
             print 'Creating PTR record for', Name, 'resulted in:', dns.rcode.to_text(Response.rcode())
-
-def main():
-    myArgs = getArgs()
-    global Verbose
-    if myArgs.Verbose == True:
-        Verbose = True
-    doUpdate(myArgs.Server, myArgs.Key, myArgs.Origin, myArgs.doPTR, myArgs.myInput)
-
-main()
-
