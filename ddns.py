@@ -111,7 +111,7 @@ def main():
         print "Error: Invalid domain/password combination"
         exit()
 
-    nsu_str = generate_nsupdate_key_string(data[domain])
+    nsu_str = generate_nsupdate_key_string(data)
 
     # Update each requested ipaddr_type
     for ipaddr_type in ip_arguments:
