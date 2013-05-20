@@ -1,0 +1,4 @@
+<Files ddns.ini>
+   Order Deny,Allow
+   Deny from all
+</Files>
