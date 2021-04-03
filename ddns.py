@@ -68,10 +68,12 @@ def read_arguments():
             else:
                 foundAny = True
 
-    if foundAny is False:
-        print("Error: none of the following parameters was given",
-              ip_arguments, "<br>")
-        error = True
+    if not error and not foundAny:
+        # Get IP from REMOTE_ADDR anc check whether it is v4 or v6
+        ip = os.environ["REMOTE_ADDR"]
+        for iparg in ip_arguments:
+            if ip_check[iparg](ip):
+                args[iparg] = ip
 
     if error is True:
         print("Error: There were errors while parsing the arguments.<br>")
