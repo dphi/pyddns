@@ -1,24 +1,49 @@
 #!/usr/bin/env python3
 
-import os
 import cgi
 import cgitb
 import datetime
+import os
 import socket
-from configparser import SafeConfigParser
+from configparser import ConfigParser
 
-from dnsupdate import doUpdate, isValidV4Addr, isValidV6Addr
+import dns
 import dns.exception
+import dns.ipv4
+import dns.ipv6
+import dns.query
+import dns.tsigkeyring
+from dns.tsig import HMAC_MD5
+from dns.update import UpdateMessage
 
 cgitb.enable()
 
 configuration_file = "ddns.ini"
 
+# Is a valid IPV4 address?
+def isValidV4Addr(Address):
+    try:
+        dns.ipv4.inet_aton(Address)
+    except socket.error:
+        print('Error:', Address, 'is not a valid IPv4 address')
+        exit()
+    return True
+
+
+# Is a valid IPv6 address?
+def isValidV6Addr(Address):
+    try:
+        dns.ipv6.inet_aton(Address)
+    except SyntaxError:
+        print('Error:', Address, 'is not a valid IPv6 address')
+        exit()
+    return True
+
 
 def read_data(domain):
     valid_options = ["password", "dns-server", "nsupdate-key", "origin"]
 
-    cp = SafeConfigParser()
+    cp = ConfigParser()
     cp.read(configuration_file)
     if cp.has_section(domain):
         data = dict()
@@ -72,8 +97,6 @@ def read_arguments():
                 print("Error:", args[iparg], "is not a valid", iparg)
                 error = True
 
-                
-
     if not error and not foundAny:
         # Get IP from REMOTE_ADDR anc check whether it is v4 or v6
         ip = os.environ["REMOTE_ADDR"]
@@ -92,22 +115,6 @@ def read_arguments():
     return args
 
 
-def generate_nsupdate_key_string(ddata):
-    origin = ddata["origin"]
-    if not origin.endswith("."):
-        origin = origin + "."
-
-    return {origin: ddata["nsupdate-key"]}
-
-
-def generate_action_string(domain, ddata, ip, ipaddr_type, action="update"):
-    ip_type = {"ip4addr": "A", "ip6addr": "AAAA"}
-
-    TTL = 60
-    TYPE = ip_type[ipaddr_type]
-    return [action, domain, str(TTL), TYPE, ip]
-
-
 def main():
     print_header()
 
@@ -124,30 +131,33 @@ def main():
         print("Error: Invalid domain/password combination")
         exit()
 
-    nsu_str = generate_nsupdate_key_string(data)
+    # add "." to origin if required
+    if not data["origin"].endswith("."):
+        data["origin"] = data["origin"] + "."
 
     # convert dns server name to ip
-    data["dns-server"] = socket.gethostbyname(data["dns-server"])
+    data["dns-server-ip"] = socket.gethostbyname(data["dns-server"])
+    keyring = dns.tsigkeyring.from_text({data["origin"]: data["nsupdate-key"]})
+    um = UpdateMessage(data["origin"], keyring=keyring, keyalgorithm=HMAC_MD5)
 
-
-    def date_update_str(): return ["update", domain, "60", "TXT",
-                                   "last update: %s Europe/Berlin" % datetime.datetime.now()]
-
-    # add date record
-    doUpdate(data["dns-server"], nsu_str,
-             data["origin"], False, date_update_str())
+    um.replace(domain, 60, "TXT",  "last update: %s Europe/Berlin" %
+               datetime.datetime.now())
+    dns.query.tcp(um, data["dns-server-ip"])
 
     # Update each requested ipaddr_type, or delete if not passed
+    ip_type = {"ip4addr": "A", "ip6addr": "AAAA"}
     for ipaddr_type in ip_arguments:
-        if ipaddr_type in arguments:
-            a = "update"
-        else:
-            a = "delete"
 
-        action = generate_action_string(
-            domain, data, arguments[ipaddr_type], ipaddr_type, action=a)
-        doUpdate(data["dns-server"], nsu_str,
-                 data["origin"], False, action)
+        um = UpdateMessage(
+            data["origin"], keyring=keyring, keyalgorithm=HMAC_MD5)
+
+        if ipaddr_type in arguments:
+            um.replace(
+                domain, 60, ip_type[ipaddr_type], arguments[ipaddr_type])
+        else:
+            um.delete(domain, ip_type[ipaddr_type])
+
+        dns.query.tcp(um, data["dns-server-ip"], )
 
 
 if __name__ == "__main__":
