@@ -91,12 +91,12 @@ def generate_nsupdate_key_string(ddata):
     return {origin: ddata["nsupdate-key"]}
 
 
-def generate_action_string(domain, ddata, ip, ipaddr_type):
+def generate_action_string(domain, ddata, ip, ipaddr_type, action="update"):
     ip_type = {"ip4addr": "A", "ip6addr": "AAAA"}
 
     TTL = 60
     TYPE = ip_type[ipaddr_type]
-    return ["update", domain, str(TTL), TYPE, ip]
+    return [action, domain, str(TTL), TYPE, ip]
 
 
 def main():
