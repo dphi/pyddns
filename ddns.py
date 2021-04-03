@@ -7,6 +7,7 @@ import datetime
 from configparser import SafeConfigParser
 
 from dnsupdate import doUpdate, isValidV4Addr, isValidV6Addr
+import dns.exception
 
 cgitb.enable()
 
@@ -63,18 +64,25 @@ def read_arguments():
     foundAny = False
     for iparg in ip_arguments:
         if iparg in args:
-            if not ip_check[iparg](args[iparg]):
+            try:
+                ip_check[iparg](args[iparg])
+                foundAny = True
+            except dns.exception.SyntaxError as e:
                 print("Error:", args[iparg], "is not a valid", iparg)
                 error = True
-            else:
-                foundAny = True
+
+                
 
     if not error and not foundAny:
         # Get IP from REMOTE_ADDR anc check whether it is v4 or v6
         ip = os.environ["REMOTE_ADDR"]
         for iparg in ip_arguments:
-            if ip_check[iparg](ip):
-                args[iparg] = ip
+            try:
+                if ip_check[iparg](ip):
+                    args[iparg] = ip
+
+            except dns.exception.SyntaxError as e:
+                pass
 
     if error is True:
         print("Error: There were errors while parsing the arguments.<br>")
