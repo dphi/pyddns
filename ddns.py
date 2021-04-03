@@ -23,7 +23,8 @@ def read_data(domain):
             if option in valid_options:
                 data[option] = value
             else:
-                print("Error: Found a invalid option for domain", domain, ":", option)
+                print("Error: Found a invalid option for domain",
+                      domain, ":", option)
                 exit()
         return data
 
@@ -68,7 +69,8 @@ def read_arguments():
                 foundAny = True
 
     if foundAny is False:
-        print("Error: none of the following parameters was given", ip_arguments, "<br>")
+        print("Error: none of the following parameters was given",
+              ip_arguments, "<br>")
         error = True
 
     if error is True:
@@ -112,16 +114,21 @@ def main():
 
     nsu_str = generate_nsupdate_key_string(data)
 
-    def date_update_str(): return ["update", domain, "60", "TXT", "last update: %s Europe/Berlin" % datetime.datetime.now()]
+    def date_update_str(): return ["update", domain, "60", "TXT",
+                                   "last update: %s Europe/Berlin" % datetime.datetime.now()]
 
     # add date record
-    doUpdate(data["dns-server"], nsu_str, data["origin"], False, date_update_str())
+    doUpdate(data["dns-server"], nsu_str,
+             data["origin"], False, date_update_str())
 
     # Update each requested ipaddr_type
     for ipaddr_type in ip_arguments:
         if ipaddr_type in arguments:
-            action = generate_action_string(domain, data, arguments[ipaddr_type], ipaddr_type)
-            doUpdate(data["dns-server"], nsu_str, data["origin"], False, action)
+            action = generate_action_string(
+                domain, data, arguments[ipaddr_type], ipaddr_type)
+            doUpdate(data["dns-server"], nsu_str,
+                     data["origin"], False, action)
+
 
 if __name__ == "__main__":
     main()
