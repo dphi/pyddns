@@ -1,13 +1,12 @@
-#!/usr/bin/python2.6
-
-from dnsupdate import doUpdate
-from dnsupdate import isValidV6Addr
-from dnsupdate import isValidV4Addr
-
-from ConfigParser import SafeConfigParser
+#!/usr/bin/env python3
 
 import cgi
 import cgitb
+import datetime
+from configparser import SafeConfigParser
+
+from dnsupdate import doUpdate, isValidV4Addr, isValidV6Addr
+
 cgitb.enable()
 
 configuration_file = "ddns.ini"
@@ -24,7 +23,7 @@ def read_data(domain):
             if option in valid_options:
                 data[option] = value
             else:
-                print "Error: Found a invalid option for domain", domain, ":", option
+                print("Error: Found a invalid option for domain", domain, ":", option)
                 exit()
         return data
 
@@ -32,8 +31,8 @@ def read_data(domain):
 
 
 def print_header():
-    print "Content-Type: text/html"     # HTML is following
-    print                               # blank line, end of headers
+    print("Content-Type: text/html")     # HTML is following
+    print()                              # blank line, end of headers
 
 
 ip_arguments = ["ip4addr", "ip6addr"]
@@ -56,24 +55,24 @@ def read_arguments():
     error = False
     for reqarg in required_arguments:
         if reqarg not in args:
-            print "Error:", reqarg, "was not passed<br>"
+            print("Error:", reqarg, "was not passed<br>")
             error = True
 
     foundAny = False
     for iparg in ip_arguments:
         if iparg in args:
             if not ip_check[iparg](args[iparg]):
-                print "Error:", args[iparg], "is not a valid", iparg
+                print("Error:", args[iparg], "is not a valid", iparg)
                 error = True
             else:
                 foundAny = True
 
     if foundAny is False:
-        print "Error: none of the following parameters was given", ip_arguments, "<br>"
+        print("Error: none of the following parameters was given", ip_arguments, "<br>")
         error = True
 
     if error is True:
-        print "Error: There were errors while parsing the arguments.<br>"
+        print("Error: There were errors while parsing the arguments.<br>")
         exit()
 
     return args
@@ -108,10 +107,15 @@ def main():
 
     # Is the request valid and the domain configured?
     if not (data is not None and arguments["password"] == data["password"]):
-        print "Error: Invalid domain/password combination"
+        print("Error: Invalid domain/password combination")
         exit()
 
     nsu_str = generate_nsupdate_key_string(data)
+
+    def date_update_str(): return ["update", domain, "60", "TXT", "last update: %s Europe/Berlin" % datetime.datetime.now()]
+
+    # add date record
+    doUpdate(data["dns-server"], nsu_str, data["origin"], False, date_update_str())
 
     # Update each requested ipaddr_type
     for ipaddr_type in ip_arguments:

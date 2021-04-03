@@ -1,12 +1,19 @@
 # Matt's DNS management tool
 # Manage DNS using DDNS features
-import textwrap
 import re
+import socket
+import textwrap
+
+import dns.ipv4
+import dns.ipv6
+import dns.name
 import dns.query
-import dns.tsigkeyring
-import dns.update
-import dns.reversename
 import dns.resolver
+import dns.reversename
+import dns.tsig
+import dns.tsigkeyring
+import dns.ttl
+import dns.update
 from dns.exception import DNSException, SyntaxError
 
 Verbose = False
@@ -17,7 +24,7 @@ def isValidTTL(TTL):
     try:
         TTL = dns.ttl.from_text(TTL)
     except:
-        print 'TTL:', TTL, 'is not valid'
+        print('TTL:', TTL, 'is not valid')
         exit()
     return TTL
 #
@@ -26,7 +33,7 @@ def isValidPTR(ptr):
     if re.match(r'\b(?:\d{1,3}\.){3}\d{1,3}.in-addr.arpa\b', ptr):
         return True
     else:
-        print 'Error:', ptr, 'is not a valid PTR record'
+        print('Error:', ptr, 'is not a valid PTR record')
         exit() 
 #
 # Is a valid IPV4 address?
@@ -34,7 +41,7 @@ def isValidV4Addr(Address):
     try:
         dns.ipv4.inet_aton(Address)
     except socket.error:
-        print 'Error:', Address, 'is not a valid IPv4 address'
+        print('Error:', Address, 'is not a valid IPv4 address')
         exit()
     return True
 #
@@ -43,7 +50,7 @@ def isValidV6Addr(Address):
     try:
         dns.ipv6.inet_aton(Address) 
     except SyntaxError:
-        print 'Error:', Address, 'is not a valid IPv6 address'
+        print('Error:', Address, 'is not a valid IPv6 address')
         exit()
     return True
 
@@ -51,7 +58,7 @@ def isValidName(Name):
     if re.match(r'^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\-]*[A-Za-z0-9]\.?)$', Name):
         return True
     else:
-        print 'Error:', Name, 'is not a valid name'
+        print('Error:', Name, 'is not a valid name')
         exit()
 
 def verifymyInput(myInput):
@@ -62,8 +69,8 @@ def verifymyInput(myInput):
     # We're going to make sure that the action and arguments in MymyInput are valid
     action = myInput[0].lower()
     if action != 'add' and action != 'delete' and action != 'del' and action != 'update':
-        print 'Error: Invalid action'
-        print 'Usage: dnsupdate -s server -k key [add|delete|update] [Name] [Type] [TTL] [Address]'
+        print('Error: Invalid action')
+        print('Usage: dnsupdate -s server -k key [add|delete|update] [Name] [Type] [TTL] [Address]')
         exit()
     # Set the TTL
     ttl = isValidTTL(myInput[2])
@@ -72,8 +79,8 @@ def verifymyInput(myInput):
     # Based on the type of record we're trying to update we'll run some tests
     if type == 'A' or type == 'AAAA':
         if len(myInput) < 5:
-            print 'Error: not enough options for an A record'
-            print 'Usage: dnsupdate -o origin -s server -k key add|delete|update Name TTL A Address'
+            print('Error: not enough options for an A record')
+            print('Usage: dnsupdate -o origin -s server -k key add|delete|update Name TTL A Address')
             exit()
         isValidName(myInput[1])
         if type == 'A':
@@ -82,15 +89,15 @@ def verifymyInput(myInput):
             isValidV6Addr(myInput[4])
     if type == 'CNAME' or type == 'NS':
         if len(myInput) < 4:
-            print 'Error: not enough options for a CNAME record'
-            print 'Usage: dnsupdate -o origin -s server -k key add|delete|update Name TTL CNAME Target'
+            print('Error: not enough options for a CNAME record')
+            print('Usage: dnsupdate -o origin -s server -k key add|delete|update Name TTL CNAME Target')
             exit()
         isValidName(myInput[1])
         isValidName(myInput[4])
     if type == 'PTR':
         if len(myInput) < 4:
-            print 'Error: not enough options for a PTR record'
-            print 'Usage: dnsupdate -o origin -s server -k key add|delete|update Name TTL PTR Target'
+            print('Error: not enough options for a PTR record')
+            print('Usage: dnsupdate -o origin -s server -k key add|delete|update Name TTL PTR Target')
             exit()
 #        isValidPTR(myInput[1])
         isValidName(myInput[4])
@@ -99,25 +106,25 @@ def verifymyInput(myInput):
         myInput[4] = '"%s"' % myInput[4]
     if type == 'MX':
         if len(myInput) < 4:
-            print 'Error: not enough options for an MX record'
-            print 'Usage: dnsupdate -o origin -s server -k key add|delete|update Name TTL MX Weight Target'
+            print('Error: not enough options for an MX record')
+            print('Usage: dnsupdate -o origin -s server -k key add|delete|update Name TTL MX Weight Target')
         if int(myInput[4]) > 65535 or int(myInput[4]) < 0:
-            print 'Error: Preference must be between 0 - 65535'
+            print('Error: Preference must be between 0 - 65535')
             exit()
         isValidName(myInput[1])
         isValidName(myInput[5])
     if type == 'SRV':
         if len(myInput) < 7:
-            print 'Error: not enough options for a SRV record'
-            print 'Usage: dnsupdate -o origin -s server -k key add|delete|update Name TTL SRV Priority Weight Port Target'
+            print('Error: not enough options for a SRV record')
+            print('Usage: dnsupdate -o origin -s server -k key add|delete|update Name TTL SRV Priority Weight Port Target')
         if int(myInput[4]) > 65535 or int(myInput[4]) < 0:
-            print 'Error: Priority must be between 0 - 65535'
+            print('Error: Priority must be between 0 - 65535')
             exit()
         if int(myInput[5]) > 65535 or int(myInput[5]) < 0:
-            print 'Error: Weight must be between 0 - 65535'
+            print('Error: Weight must be between 0 - 65535')
             exit()
         if int(myInput[6]) > 65535 or int(myInput[6]) < 0:
-            print 'Error: Port must be between 0 - 65535'
+            print('Error: Port must be between 0 - 65535')
             exit()
         isValidName(myInput[1])
         isValidName(myInput[7])
@@ -127,7 +134,7 @@ def getKey(KeyString):
     try:
         KeyRing = dns.tsigkeyring.from_text(KeyString)
     except:
-        print KeyString, 'is not a valid key. The file should be in DNS KEY record format. See dnssec-keygen(8)'
+        print(KeyString, 'is not a valid key. The file should be in DNS KEY record format. See dnssec-keygen(8)')
         exit()
     return KeyRing
 
@@ -135,14 +142,14 @@ def genPTR(Address):
     try:
         a = dns.reversename.from_address(Address)
     except:
-        print 'Error:', Address, 'is not a valid IP adresss'
+        print('Error:', Address, 'is not a valid IP adresss')
     return a
     
 def parseName(Origin, Name):
     try:
         n = dns.name.from_text(Name)
     except:
-        print 'Error:',  n, 'is not a valid name'
+        print('Error:',  n, 'is not a valid name')
         exit()
     if Origin is None:
         Origin = dns.resolver.zone_for_name(n)
@@ -152,7 +159,7 @@ def parseName(Origin, Name):
         try:
             Origin = dns.name.from_text(Origin)
         except:
-            print 'Error:',  Name, 'is not a valid origin'
+            print('Error:',  Name, 'is not a valid origin')
             exit()
         Name = n - Origin
         return Origin, Name
@@ -199,15 +206,15 @@ def doUpdate(Server, KeyFile, Origin, doPTR, myInput):
     try:
         Response = dns.query.tcp(Update, Server)
     except dns.tsig.PeerBadKey:
-        print 'ERROR: The server is refusing our key'
+        print('ERROR: The server is refusing our key')
         exit()
     if Verbose == True:
-         print 'Creating', Type, 'record for', Name, 'resulted in:', dns.rcode.to_text(Response.rcode())
+         print('Creating', Type, 'record for', Name, 'resulted in:', dns.rcode.to_text(Response.rcode()))
     if doPTR == True:
         try:
             ptrResponse = dns.query.tcp(ptrUpdate, Server)
         except dns.tsig.PeerBadKey:
-            print 'ERROR: The server is refusing our key'
+            print('ERROR: The server is refusing our key')
             exit()
         if Verbose == True:
-            print 'Creating PTR record for', Name, 'resulted in:', dns.rcode.to_text(Response.rcode())
+            print('Creating PTR record for', Name, 'resulted in:', dns.rcode.to_text(Response.rcode()))
