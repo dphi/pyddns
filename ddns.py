@@ -124,13 +124,17 @@ def main():
     doUpdate(data["dns-server"], nsu_str,
              data["origin"], False, date_update_str())
 
-    # Update each requested ipaddr_type
+    # Update each requested ipaddr_type, or delete if not passed
     for ipaddr_type in ip_arguments:
         if ipaddr_type in arguments:
-            action = generate_action_string(
-                domain, data, arguments[ipaddr_type], ipaddr_type)
-            doUpdate(data["dns-server"], nsu_str,
-                     data["origin"], False, action)
+            a = "update"
+        else:
+            a = "delete"
+
+        action = generate_action_string(
+            domain, data, arguments[ipaddr_type], ipaddr_type, action=a)
+        doUpdate(data["dns-server"], nsu_str,
+                 data["origin"], False, action)
 
 
 if __name__ == "__main__":
