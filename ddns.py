@@ -4,6 +4,7 @@ import os
 import cgi
 import cgitb
 import datetime
+import socket
 from configparser import SafeConfigParser
 
 from dnsupdate import doUpdate, isValidV4Addr, isValidV6Addr
@@ -124,6 +125,10 @@ def main():
         exit()
 
     nsu_str = generate_nsupdate_key_string(data)
+
+    # convert dns server name to ip
+    data["dns-server"] = socket.gethostbyname(data["dns-server"])
+
 
     def date_update_str(): return ["update", domain, "60", "TXT",
                                    "last update: %s Europe/Berlin" % datetime.datetime.now()]
