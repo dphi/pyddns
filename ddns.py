@@ -131,6 +131,15 @@ def main():
         print("Error: Invalid domain/password combination")
         exit()
 
+    def clean_domain():
+        if not arguments["domain"].endswith(data["origin"]):
+            raise ValueError("the domain", arguments["domain"], "does not end with the origin parameter", data["origin"])
+        
+        return arguments["domain"].replace("." + data["origin"], "")
+
+    name = clean_domain()
+
+
     # add "." to origin if required
     if not data["origin"].endswith("."):
         data["origin"] = data["origin"] + "."
@@ -140,7 +149,7 @@ def main():
     keyring = dns.tsigkeyring.from_text({data["origin"]: data["nsupdate-key"]})
     um = UpdateMessage(data["origin"], keyring=keyring, keyalgorithm=HMAC_MD5)
 
-    um.replace(domain, 60, "TXT",  "last update: %s Europe/Berlin" %
+    um.replace(name, 60, "TXT",  "last update: %s Europe/Berlin" %
                datetime.datetime.now())
     dns.query.tcp(um, data["dns-server-ip"])
 
@@ -153,9 +162,9 @@ def main():
 
         if ipaddr_type in arguments:
             um.replace(
-                domain, 60, ip_type[ipaddr_type], arguments[ipaddr_type])
+                name, 60, ip_type[ipaddr_type], arguments[ipaddr_type])
         else:
-            um.delete(domain, ip_type[ipaddr_type])
+            um.delete(name, ip_type[ipaddr_type])
 
         dns.query.tcp(um, data["dns-server-ip"], )
 
